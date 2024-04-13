@@ -27,6 +27,7 @@ class Network:
         self.step_idx = []
         self.epoch_counter = 0
         self.loss_idx = []
+
     def load_data(self, filename='polish_names.txt'):
         self.words = [w.lower() for w in open(filename, 'r', encoding="utf8").read().splitlines()]
         chars = sorted(list(set(''.join(self.words))))
