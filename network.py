@@ -74,3 +74,18 @@ class Network:
             self.loss_idx.append(loss.item())
         plt.plot(self.step_idx, self.loss_idx)
         plt.show()
+
+    def sample(self, n=10):
+        out = []
+        context = [0] * hp.BLOCK_SIZE
+        res = ""
+        for _ in range(n):
+            embeddings = self.C[torch.tensor(context).view(1, -1)]
+            hidden = torch.tanh(embeddings.view(-1, hp.BLOCK_SIZE * hp.EMBEDDING_DIM) @ self.W1 + self.b1)
+            logits = hidden @ self.W2 + self.b2
+            probs = F.softmax(logits, dim=1)
+            ix = torch.multinomial(probs, num_samples=1).item()
+            res += self.int_to_string[ix]
+            context = context[1:] + [ix]
+            out.append(ix)
+        return res
