@@ -3,6 +3,7 @@ import torch.nn.functional as F
 import hyperparams as hp
 import random
 import matplotlib.pyplot as plt
+import itertools
 
 class Network:
     def __init__(self):
@@ -10,17 +11,16 @@ class Network:
         self.X_training, self.Y_training = None, None
         self.X_dev, self.Y_dev = None, None
         self.X_test, self.Y_test = None, None
-        self.words, self.char_size = None, None
+        self.data_units, self.tokens_size = None, None
         self.int_to_string, self.string_to_int = None, None
         self.C, self.W1, self.b1, self.W2, self.b2 = None, None, None, None, None
-        self.__initialize_params()
 
     def __initialize_params(self):
-        self.C = torch.randn((hp.CHAR_SIZE, hp.EMBEDDING_DIM))
+        self.C = torch.randn((self.tokens_size, hp.EMBEDDING_DIM))
         self.W1 = torch.randn((hp.BLOCK_SIZE * hp.EMBEDDING_DIM, hp.HIDDEN_LAYER_SIZE))
         self.b1 = torch.randn(hp.HIDDEN_LAYER_SIZE)
-        self.W2 = torch.randn((hp.HIDDEN_LAYER_SIZE, hp.CHAR_SIZE))
-        self.b2 = torch.randn(hp.CHAR_SIZE)
+        self.W2 = torch.randn((hp.HIDDEN_LAYER_SIZE, self.tokens_size))
+        self.b2 = torch.randn(self.tokens_size)
         self.parameters = [self.C, self.W1, self.b1, self.W2, self.b2]
         for p in self.parameters:
             p.requires_grad = True
@@ -28,26 +28,28 @@ class Network:
         self.epoch_counter = 0
         self.loss_idx = []
 
-    def load_data(self, filename='polish_names.txt'):
-        self.words = [w.lower() for w in open(filename, 'r', encoding="utf8").read().splitlines()]
-        chars = sorted(list(set(''.join(self.words))))
-        self.string_to_int = {s: i + 1 for i, s in enumerate(chars)}
+    def load_data(self, filename='sentences.txt'):
+        self.data_units = [w.split(" ") for w in open(filename, 'r', encoding="utf8").read().splitlines()]
+        tokens = sorted(list(set(itertools.chain(*self.data_units))))
+        self.string_to_int = {s: i + 1 for i, s in enumerate(tokens)}
         self.string_to_int['.'] = 0
         self.int_to_string = {i: s for s, i in self.string_to_int.items()}
-        self.char_size = len(self.string_to_int)
-        random.shuffle(self.words)
-        n1 = int(0.8 * len(self.words))
-        n2 = int(0.9 * len(self.words))
+        self.tokens_size = len(self.string_to_int)
+        random.shuffle(self.data_units)
+        n1 = int(0.8 * len(self.data_units))
+        n2 = int(0.9 * len(self.data_units))
 
-        self.X_training, self.Y_training = self.__build_dataset(self.words[:n1])
-        self.X_dev, self.Y_dev = self.__build_dataset(self.words[n1:n2])
-        self.X_test, self.Y_test = self.__build_dataset(self.words[n2:])
+        self.X_training, self.Y_training = self.__build_dataset(self.data_units)
+        # self.X_training, self.Y_training = self.__build_dataset(self.data_units[:n1])
+        # self.X_dev, self.Y_dev = self.__build_dataset(self.data_units[n1:n2])
+        # self.X_test, self.Y_test = self.__build_dataset(self.data_units[n2:])
+        self.__initialize_params()
 
-    def __build_dataset(self, words):
+    def __build_dataset(self, data_units):
         X, Y = [], []
-        for w in words:
+        for w in data_units:
             context = [0] * hp.BLOCK_SIZE
-            for ch in w + '.':
+            for ch in w + ['.']:
                 ix = self.string_to_int[ch]
                 X.append(context)
                 Y.append(ix)
@@ -77,16 +79,16 @@ class Network:
 
     def sample(self):
         context = torch.zeros(hp.BLOCK_SIZE, dtype=torch.long)
-        name = ""
+        words = []
         for _ in range(30):
             embedding = self.C[context]
             hidden = torch.tanh(embedding.view(1, -1) @ self.W1 + self.b1)
             logits = hidden @ self.W2 + self.b2
             probs = F.softmax(logits, dim=1)
             ix = torch.multinomial(probs, num_samples=1).item()
-            name += self.int_to_string[ix]
+            words.append(self.int_to_string[ix])
             context = context.roll(-1)
             context[-1] = ix
             if ix == 0:
                 break
-        return name
+        return ' '.join(words)
