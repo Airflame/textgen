@@ -17,7 +17,7 @@ class Network:
 
     def __initialize_params(self):
         self.C = torch.randn((hp.CHAR_SIZE, hp.EMBEDDING_DIM))
-        self.W1 = torch.randn((hp.BLOCK_SIZE * hp.EMBEDDING_DIM, hp.HIDDEN_LAYER_SIZE)) * 0.2
+        self.W1 = torch.randn((hp.BLOCK_SIZE * hp.EMBEDDING_DIM, hp.HIDDEN_LAYER_SIZE)) * (5/3)/((hp.BLOCK_SIZE * hp.EMBEDDING_DIM)**0.5)
         self.b1 = torch.randn(hp.HIDDEN_LAYER_SIZE) * 0.01
         self.W2 = torch.randn((hp.HIDDEN_LAYER_SIZE, hp.CHAR_SIZE)) * 0.01
         self.b2 = torch.randn(hp.CHAR_SIZE) * 0
